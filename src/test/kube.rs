@@ -9,13 +9,13 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
     CustomResourceDefinition, CustomResourceDefinitionCondition,
 };
 use kube::api::{
-    Api, DeleteParams, ListParams, Meta, ObjectList, Patch, PatchParams, PostParams, WatchEvent,
+    Api, DeleteParams, ListParams, ObjectList, Patch, PatchParams, PostParams, WatchEvent,
 };
-use kube::Client;
+use kube::{Client, Resource, ResourceExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
-use std::time::Duration;
+use std::{fmt::Debug, time::Duration};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
 
@@ -56,7 +56,8 @@ impl TestKubeClient {
     /// separated: `key1=value1,key2=value2`.
     pub fn list_labeled<K>(&self, label_selector: &str) -> ObjectList<K>
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         self.runtime.block_on(async {
             self.kube_client
@@ -76,19 +77,31 @@ impl TestKubeClient {
         })
     }
 
-    /// Searches for a named resource.
+    /// Searches for a resource.
     pub fn find<K>(&self, name: &str) -> Option<K>
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         self.runtime
             .block_on(async { self.kube_client.find::<K>(name).await })
     }
 
+    /// Searches for a namespaced resource.
+    pub fn find_namespaced<K>(&self, name: &str) -> Option<K>
+    where
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
+    {
+        self.runtime
+            .block_on(async { self.kube_client.find_namespaced::<K>(name).await })
+    }
+
     /// Applies a resource with the given YAML specification.
     pub fn apply<K>(&self, spec: &str) -> K
     where
-        K: Clone + DeserializeOwned + Meta + Serialize,
+        K: Clone + Debug + DeserializeOwned + Resource + Serialize,
+        <K as Resource>::DynamicType: Default,
     {
         self.runtime.block_on(async {
             self.kube_client
@@ -101,7 +114,8 @@ impl TestKubeClient {
     /// Creates a resource with the given YAML specification.
     pub fn create<K>(&self, spec: &str) -> K
     where
-        K: Clone + DeserializeOwned + Meta + Serialize,
+        K: Clone + Debug + DeserializeOwned + Resource + Serialize,
+        <K as Resource>::DynamicType: Default,
     {
         self.runtime.block_on(async {
             self.kube_client
@@ -114,7 +128,8 @@ impl TestKubeClient {
     /// Deletes the given resource.
     pub fn delete<K>(&self, resource: K)
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         self.runtime.block_on(async {
             self.kube_client
@@ -127,7 +142,8 @@ impl TestKubeClient {
     /// Returns the value of an annotation for the given resource.
     pub fn get_annotation<K>(&self, resource: &K, key: &str) -> String
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         self.runtime.block_on(async {
             self.kube_client
@@ -213,7 +229,8 @@ impl KubeClient {
     /// `key1=value1,key2=value2`.
     pub async fn list_labeled<K>(&self, label_selector: &str) -> Result<ObjectList<K>>
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         let api: Api<K> = Api::all(self.client.clone());
         let lp = ListParams::default().labels(label_selector);
@@ -259,10 +276,21 @@ impl KubeClient {
         ))
     }
 
-    /// Searches for a named resource.
+    /// Searches for a resource.
     pub async fn find<K>(&self, name: &str) -> Option<K>
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
+    {
+        let api: Api<K> = Api::all(self.client.clone());
+        api.get(name).await.ok()
+    }
+
+    /// Searches for a namespaced resource.
+    pub async fn find_namespaced<K>(&self, name: &str) -> Option<K>
+    where
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
         api.get(name).await.ok()
@@ -271,7 +299,8 @@ impl KubeClient {
     /// Applies a resource with the given YAML specification.
     pub async fn apply<K>(&self, spec: &str) -> Result<K>
     where
-        K: Clone + DeserializeOwned + Meta + Serialize,
+        K: Clone + Debug + DeserializeOwned + Resource + Serialize,
+        <K as Resource>::DynamicType: Default,
     {
         let resource: K = from_yaml(spec);
         let apply_params = PatchParams::apply("agent_integration_test").force();
@@ -285,7 +314,8 @@ impl KubeClient {
     /// confirmation of the creation.
     pub async fn create<K>(&self, spec: &str) -> Result<K>
     where
-        K: Clone + DeserializeOwned + Meta + Serialize,
+        K: Clone + Debug + DeserializeOwned + Resource + Serialize,
+        <K as Resource>::DynamicType: Default,
     {
         let timeout_secs = self.timeouts.create.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
@@ -314,7 +344,8 @@ impl KubeClient {
     /// Deletes the given resource and awaits the confirmation of the deletion.
     pub async fn delete<K>(&self, resource: K) -> Result<()>
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         let timeout_secs = self.timeouts.delete.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
@@ -348,7 +379,8 @@ impl KubeClient {
     /// Returns the value of an annotation for the given resource.
     pub async fn get_annotation<K>(&self, resource: &K, key: &str) -> Result<String>
     where
-        K: Clone + DeserializeOwned + Meta,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
     {
         let get_value = |resource: &K| {
             resource

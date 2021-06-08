@@ -1,11 +1,18 @@
 use super::prelude::TestKubeClient;
-use kube::api::Meta;
+use kube::Resource;
 use serde::{de::DeserializeOwned, Serialize};
+use std::fmt::Debug;
 use std::{mem, ops::Deref};
 
 /// Trait combo which must be satisfied for a resource to be deletable
-pub trait DeletableResource: Clone + Default + DeserializeOwned + Meta {}
-impl<T: Clone + Default + DeserializeOwned + Meta> DeletableResource for T {}
+pub trait DeletableResource:
+    Clone + Debug + Default + DeserializeOwned + Resource<DynamicType = ()>
+{
+}
+impl<T: Clone + Debug + Default + DeserializeOwned + Resource<DynamicType = ()>> DeletableResource
+    for T
+{
+}
 
 /// A temporary resource which is deleted when it goes out of scope
 pub struct TemporaryResource<'a, T: DeletableResource> {
