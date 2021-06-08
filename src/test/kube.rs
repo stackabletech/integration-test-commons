@@ -11,7 +11,7 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
 use kube::api::{
     Api, DeleteParams, ListParams, ObjectList, Patch, PatchParams, PostParams, WatchEvent,
 };
-use kube::{Client, Resource, ResourceExt};
+use kube::{Client, Resource};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
