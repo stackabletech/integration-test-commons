@@ -14,5 +14,5 @@
 
 === Changed
 * Dependency `kube` set to version `0.52` ({2}).
-* `test::KubeClient::find` renamed to `test::KubeClient::find_namespaced` ({2}).
-* `test::KubeClient::find_crd` generalized and renamed to `test::KubeClient::find` ({2}).
+* `KubeClient::find` renamed to `KubeClient::find_namespaced` ({2}).
+* `KubeClient::find_crd` generalized and renamed to `KubeClient::find` ({2}).
