@@ -1,0 +1,13 @@
+= Changelog
+
+== 0.1.0 - unreleased
+
+:2: https://github.com/stackabletech/integration-test-commons/pull/2[#2]
+
+=== Added
+* Module `test` moved and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ({2}).
+
+=== Changed
+* Dependency `kube` set to version `0.52` ({2}).
+* `test::KubeClient::find` renamed to `test::KubeClient::find_namespaced` ({2}).
+* `test::KubeClient::find_crd` generalized and renamed to `test::KubeClient::find` ({2}).
