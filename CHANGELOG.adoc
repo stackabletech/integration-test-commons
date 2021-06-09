@@ -5,7 +5,11 @@
 :2: https://github.com/stackabletech/integration-test-commons/pull/2[#2]
 
 === Added
-* Module `test` moved and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ({2}).
+* Module `test` copied and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ({2}).
+* Unit tests created ({2}).
+
+=== Fixed
+* Doctests fixed ({2}).
 
 === Changed
 * Dependency `kube` set to version `0.52` ({2}).
