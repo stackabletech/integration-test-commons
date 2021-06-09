@@ -1,3 +1,5 @@
+//! Stackable repository
+
 use super::prelude::{KubeClient, TestKubeClient};
 use anyhow::Result;
 use kube_derive::CustomResource;

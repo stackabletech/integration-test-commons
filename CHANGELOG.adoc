@@ -6,6 +6,7 @@
 
 === Added
 * Module `test` copied and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ({2}).
+* Crate documented ({2}).
 * Unit tests created ({2}).
 
 === Fixed

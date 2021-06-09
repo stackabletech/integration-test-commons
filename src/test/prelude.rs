@@ -1,3 +1,5 @@
+//! Prelude for integration tests
+
 pub use super::assertions::*;
 pub use super::kube::*;
 pub use super::repository::*;

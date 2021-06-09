@@ -1,3 +1,5 @@
+//! Resource which is deleted when it goes out of scope
+
 use super::prelude::TestKubeClient;
 use kube::Resource;
 use serde::{de::DeserializeOwned, Serialize};
