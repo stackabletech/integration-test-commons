@@ -45,3 +45,4 @@
 //! ```
 
 pub mod test;
+pub mod operator;
