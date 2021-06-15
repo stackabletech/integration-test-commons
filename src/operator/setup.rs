@@ -1,22 +1,14 @@
 use crate::test::prelude::{Node, Pod, TestKubeClient};
 
 use anyhow::{anyhow, Result};
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
 use kube::api::ObjectList;
-use kube::Resource;
+use kube::{Resource, ResourceExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Debug;
 use std::thread;
 use std::time::{Duration, Instant};
-
-/// We need to acquire the conditions from the cluster status in order to check if the cluster is
-/// ready or finished installing / upgrading. This trait must be implemented for all products using
-/// the TestCluster wrapper. This should be enriched with other status properties that multiple
-/// operators share, e.g. currentVersion, targetVersion, commands etc.
-pub trait Status {
-    fn conditions(&self) -> Vec<Condition>;
-}
+use stackable_operator::status::Conditions;
 
 /// A Wrapper to avoid passing in client or cluster everywhere.
 pub struct TestCluster<T> {
@@ -36,7 +28,7 @@ pub struct TestClusterOptions {
 
 impl<T> TestCluster<T>
     where
-        T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize + Status,
+        T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
 {
     /// This creates a kube client and should be executed at the start of every test.
     pub fn new(options: TestClusterOptions) -> Self {
@@ -61,22 +53,13 @@ impl<T> TestCluster<T>
     /// Applies a command and waits 2 seconds to let the operator react on in.
     pub fn apply_command<C>(&self, command: &C) -> Result<C>
         where
-            C: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
+            C: Clone + Debug + DeserializeOwned + Resource<DynamicType=()> + Serialize,
     {
         let cmd: C = self.client.apply(&serde_yaml::to_string(command)?);
 
         // we wait here to give the operator time to react to the command
         thread::sleep(Duration::from_secs(2));
         Ok(cmd)
-    }
-
-    /// Creates or updates a custom resource and waits for the cluster to be up and running
-    /// within the provided timeout. Depending on the cluster definition we hand in the number
-    /// of created pods we expect manually.
-    pub fn create_or_update(&mut self, cluster: &T, expected_pod_count: usize) -> Result<()> {
-        self.apply(cluster)?;
-        self.wait_ready(expected_pod_count)?;
-        Ok(())
     }
 
     /// Deletes the custom resource, and waits for pods to be terminated
@@ -95,7 +78,7 @@ impl<T> TestCluster<T>
     /// Delete a command resource. This is for clean up purposes.
     pub fn delete_command<C>(&mut self, command: C) -> Result<()>
         where
-            C: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
+            C: Clone + Debug + DeserializeOwned + Resource<DynamicType=()> + Serialize,
     {
         self.client.delete(command);
         Ok(())
@@ -136,6 +119,20 @@ impl<T> TestCluster<T>
             "Pods did not terminate within the specified timeout of {} second(s)",
             self.options.pods_terminated_timeout_seconds
         ))
+    }
+}
+
+impl<T> TestCluster<T>
+    where
+        T: Clone + Conditions +  Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
+{
+    /// Creates or updates a custom resource and waits for the cluster to be up and running
+    /// within the provided timeout. Depending on the cluster definition we hand in the number
+    /// of created pods we expect manually.
+    pub fn create_or_update(&mut self, cluster: &T, expected_pod_count: usize) -> Result<()> {
+        self.apply(cluster)?;
+        self.wait_ready(expected_pod_count)?;
+        Ok(())
     }
 
     /// A "busy" (2 second sleep) wait for the cluster to be ready. We check the condition_type
