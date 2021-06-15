@@ -12,18 +12,22 @@ use stackable_operator::status::Conditions;
 
 /// A Wrapper to avoid passing in client or cluster everywhere.
 pub struct TestCluster<T> {
-    pub client: TestKubeClient,
+    client: TestKubeClient,
     cluster: Option<T>,
     options: TestClusterOptions,
+    timeouts: TestClusterTimeouts,
 }
 
 /// Some reoccurring common test cluster options.
-/// Should be shared via all operators / integration tests.
 pub struct TestClusterOptions {
     pub cluster_ready_condition_type: String,
-    pub cluster_ready_timeout_seconds: u64,
     pub pod_name_label: String,
-    pub pods_terminated_timeout_seconds: u64,
+}
+
+/// Some reoccurring common test cluster timeouts.
+pub struct TestClusterTimeouts {
+    pub cluster_ready: Duration,
+    pub pods_terminated: Duration,
 }
 
 impl<T> TestCluster<T>
@@ -31,11 +35,12 @@ impl<T> TestCluster<T>
         T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
 {
     /// This creates a kube client and should be executed at the start of every test.
-    pub fn new(options: TestClusterOptions) -> Self {
+    pub fn new(options: TestClusterOptions, timeouts: TestClusterTimeouts) -> Self {
         TestCluster {
             client: TestKubeClient::new(),
             cluster: None,
             options,
+            timeouts
         }
     }
 
@@ -104,7 +109,7 @@ impl<T> TestCluster<T>
     pub fn wait_for_pods_terminated(&self) -> Result<()> {
         let now = Instant::now();
 
-        while now.elapsed().as_secs() < self.options.pods_terminated_timeout_seconds {
+        while now.elapsed().as_secs() < self.timeouts.pods_terminated.as_secs() {
             let pods = self.get_current_pods();
 
             if pods.is_empty() {
@@ -117,7 +122,7 @@ impl<T> TestCluster<T>
 
         Err(anyhow!(
             "Pods did not terminate within the specified timeout of {} second(s)",
-            self.options.pods_terminated_timeout_seconds
+            self.timeouts.pods_terminated.as_secs()
         ))
     }
 }
@@ -142,11 +147,11 @@ impl<T> TestCluster<T>
 
         let name = self.cluster.as_ref().unwrap().name();
 
-        while now.elapsed().as_secs() < self.options.cluster_ready_timeout_seconds {
+        while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
             println!(
                 "Waiting for [{}/{}] to be ready...",
                 T::kind(&()),
-                self.cluster.as_ref().unwrap().name()
+                name
             );
 
             let cluster: T = self.client.find(&name).unwrap();
@@ -178,7 +183,7 @@ impl<T> TestCluster<T>
 
         Err(anyhow!(
             "Cluster did not startup within the specified timeout of {} second(s)",
-            self.options.cluster_ready_timeout_seconds
+            self.timeouts.cluster_ready.as_secs()
         ))
     }
 }

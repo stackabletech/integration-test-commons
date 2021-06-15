@@ -73,7 +73,7 @@ impl TestKubeClient {
             self.kube_client
                 .apply_crd(crd)
                 .await
-                .expect("Custom resource definition coult not be applied")
+                .expect("Custom resource definition could not be applied")
         })
     }
 
