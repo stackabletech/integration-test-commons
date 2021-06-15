@@ -5,10 +5,10 @@ use kube::api::ObjectList;
 use kube::{Resource, ResourceExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use stackable_operator::status::Conditions;
 use std::fmt::Debug;
 use std::thread;
 use std::time::{Duration, Instant};
-use stackable_operator::status::Conditions;
 
 /// A Wrapper to avoid passing in client or cluster everywhere.
 pub struct TestCluster<T> {
@@ -31,8 +31,8 @@ pub struct TestClusterTimeouts {
 }
 
 impl<T> TestCluster<T>
-    where
-        T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
+where
+    T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
 {
     /// This creates a kube client and should be executed at the start of every test.
     pub fn new(options: TestClusterOptions, timeouts: TestClusterTimeouts) -> Self {
@@ -40,7 +40,7 @@ impl<T> TestCluster<T>
             client: TestKubeClient::new(),
             cluster: None,
             options,
-            timeouts
+            timeouts,
         }
     }
 
@@ -57,8 +57,8 @@ impl<T> TestCluster<T>
 
     /// Applies a command and waits 2 seconds to let the operator react on in.
     pub fn apply_command<C>(&self, command: &C) -> Result<C>
-        where
-            C: Clone + Debug + DeserializeOwned + Resource<DynamicType=()> + Serialize,
+    where
+        C: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
     {
         let cmd: C = self.client.apply(&serde_yaml::to_string(command)?);
 
@@ -82,8 +82,8 @@ impl<T> TestCluster<T>
 
     /// Delete a command resource. This is for clean up purposes.
     pub fn delete_command<C>(&mut self, command: C) -> Result<()>
-        where
-            C: Clone + Debug + DeserializeOwned + Resource<DynamicType=()> + Serialize,
+    where
+        C: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
     {
         self.client.delete(command);
         Ok(())
@@ -128,8 +128,8 @@ impl<T> TestCluster<T>
 }
 
 impl<T> TestCluster<T>
-    where
-        T: Clone + Conditions +  Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
+where
+    T: Clone + Conditions + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
 {
     /// Creates or updates a custom resource and waits for the cluster to be up and running
     /// within the provided timeout. Depending on the cluster definition we hand in the number
@@ -148,11 +148,7 @@ impl<T> TestCluster<T>
         let name = self.cluster.as_ref().unwrap().name();
 
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
-            println!(
-                "Waiting for [{}/{}] to be ready...",
-                T::kind(&()),
-                name
-            );
+            println!("Waiting for [{}/{}] to be ready...", T::kind(&()), name);
 
             let cluster: T = self.client.find(&name).unwrap();
 
@@ -177,9 +173,8 @@ impl<T> TestCluster<T>
                         return Ok(());
                     }
                 }
-
-                thread::sleep(Duration::from_secs(2));
             }
+            thread::sleep(Duration::from_secs(2));
         }
 
         Err(anyhow!(
