@@ -155,30 +155,31 @@ impl<T> TestCluster<T>
             );
 
             let cluster: T = self.client.find(&name).unwrap();
-            let conditions = cluster.conditions();
 
-            for condition in conditions {
-                if condition.type_ == self.options.cluster_ready_condition_type
-                    // TODO: use operator-rs ConditionStatus?
-                    && condition.status == *"False"
-                {
-                    let created_pods = self.get_current_pods();
+            if let Some(conditions) = cluster.conditions() {
+                for condition in conditions {
+                    if condition.type_ == self.options.cluster_ready_condition_type
+                        // TODO: use operator-rs ConditionStatus?
+                        && condition.status == *"False"
+                    {
+                        let created_pods = self.get_current_pods();
 
-                    if created_pods.len() != expected_pod_count {
-                        break;
+                        if created_pods.len() != expected_pod_count {
+                            break;
+                        }
+
+                        for pod in &created_pods {
+                            // TODO: switch to pod condition type enum from operator-rs?
+                            self.client.verify_pod_condition(pod, "Ready")
+                        }
+
+                        println!("Installation finished");
+                        return Ok(());
                     }
-
-                    for pod in &created_pods {
-                        // TODO: switch to pod condition type enum from operator-rs?
-                        self.client.verify_pod_condition(pod, "Ready")
-                    }
-
-                    println!("Installation finished");
-                    return Ok(());
                 }
-            }
 
-            thread::sleep(Duration::from_secs(2));
+                thread::sleep(Duration::from_secs(2));
+            }
         }
 
         Err(anyhow!(
