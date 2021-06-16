@@ -31,6 +31,11 @@ impl<'a, T: DeletableResource> TemporaryResource<'a, T> {
         let resource = client.create(spec);
         TemporaryResource { client, resource }
     }
+
+    /// Updates the resource so that it contains the current status.
+    pub fn update(&mut self) {
+        self.resource = self.client.get_status(&self.resource);
+    }
 }
 
 impl<'a, T: DeletableResource> Drop for TemporaryResource<'a, T> {
