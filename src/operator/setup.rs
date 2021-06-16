@@ -150,7 +150,7 @@ where
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
             println!("Waiting for [{}/{}] to be ready...", T::kind(&()), name);
 
-            let cluster: T = self.client.find(&name).unwrap();
+            let cluster: T = self.client.find_namespaced(&name).unwrap();
 
             if let Some(conditions) = cluster.conditions() {
                 for condition in conditions {
