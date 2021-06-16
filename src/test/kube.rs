@@ -279,6 +279,11 @@ impl KubeClient {
         let timeout_secs = self.timeouts.apply_crd.as_secs() as u32;
         let crds: Api<CustomResourceDefinition> = Api::all(self.client.clone());
 
+        let lp = ListParams::default()
+            .fields(&format!("metadata.name={}", crd.name()))
+            .timeout(timeout_secs);
+        let mut stream = crds.watch(&lp, "0").await?.boxed();
+
         let apply_params = PatchParams::apply("agent_integration_test").force();
         crds.patch(&crd.name(), &apply_params, &Patch::Apply(crd))
             .await?;
@@ -286,11 +291,6 @@ impl KubeClient {
         if crds.get(&crd.name()).await.is_ok() {
             return Ok(());
         }
-
-        let lp = ListParams::default()
-            .fields(&format!("metadata.name={}", crd.name()))
-            .timeout(timeout_secs);
-        let mut stream = crds.watch(&lp, "0").await?.boxed();
 
         while let Some(status) = stream.try_next().await? {
             if let WatchEvent::Modified(crd) = status {
@@ -351,13 +351,14 @@ impl KubeClient {
         let timeout_secs = self.timeouts.create.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
 
-        let resource = from_yaml(spec);
-        api.create(&PostParams::default(), &resource).await?;
+        let resource: K = from_yaml(spec);
 
         let list_params = ListParams::default()
             .fields(&format!("metadata.name={}", resource.name()))
             .timeout(timeout_secs);
         let mut stream = api.watch(&list_params, "0").await?.boxed();
+
+        api.create(&PostParams::default(), &resource).await?;
 
         while let Some(status) = stream.try_next().await? {
             if let WatchEvent::Added(resource) = status {
@@ -381,6 +382,11 @@ impl KubeClient {
         let timeout_secs = self.timeouts.delete.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
 
+        let list_params = ListParams::default()
+            .fields(&format!("metadata.name={}", resource.name()))
+            .timeout(timeout_secs);
+        let mut stream = api.watch(&list_params, "0").await?.boxed();
+
         let result = api
             .delete(&resource.name(), &DeleteParams::default())
             .await?;
@@ -388,11 +394,6 @@ impl KubeClient {
         if result.is_right() {
             return Ok(());
         }
-
-        let list_params = ListParams::default()
-            .fields(&format!("metadata.name={}", resource.name()))
-            .timeout(timeout_secs);
-        let mut stream = api.watch(&list_params, "0").await?.boxed();
 
         while let Some(status) = stream.try_next().await? {
             if let WatchEvent::Deleted(_) = status {
