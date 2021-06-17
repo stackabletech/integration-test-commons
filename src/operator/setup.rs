@@ -13,10 +13,10 @@ use std::time::{Duration, Instant};
 /// A wrapper to avoid passing in client or cluster everywhere.
 pub struct TestCluster<T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize>
 {
-    client: TestKubeClient,
-    cluster: Option<T>,
-    options: TestClusterOptions,
-    timeouts: TestClusterTimeouts,
+    pub client: TestKubeClient,
+    pub cluster: Option<T>,
+    pub options: TestClusterOptions,
+    pub timeouts: TestClusterTimeouts,
 }
 
 /// Some reoccurring common test cluster options.
