@@ -10,8 +10,9 @@ use std::fmt::Debug;
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// A Wrapper to avoid passing in client or cluster everywhere.
-pub struct TestCluster<T> {
+/// A wrapper to avoid passing in client or cluster everywhere.
+pub struct TestCluster<T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize>
+{
     client: TestKubeClient,
     cluster: Option<T>,
     options: TestClusterOptions,
@@ -45,7 +46,7 @@ where
     }
 
     /// Applies a custom resource, stores the returned cluster object and sleeps for
-    /// to seconds to give the operator time to react on the custom resource.
+    /// two seconds to give the operator time to react on the custom resource.
     /// Without the sleep it can happen that tests run without any pods being created.
     fn apply(&mut self, cluster: &T) -> Result<()> {
         self.cluster = Some(self.client.apply(&serde_yaml::to_string(cluster)?));
@@ -67,28 +68,6 @@ where
         Ok(cmd)
     }
 
-    /// Deletes the custom resource, and waits for pods to be terminated
-    /// This should be executed after every single test to provide a "clean"
-    /// environment for the following tests.
-    pub fn delete(&mut self) -> Result<()> {
-        if let Some(cluster) = self.cluster.take() {
-            self.client.delete(cluster);
-            self.wait_for_pods_terminated()?;
-            self.cluster = None;
-        }
-
-        Ok(())
-    }
-
-    /// Delete a command resource. This is for clean up purposes.
-    pub fn delete_command<C>(&mut self, command: C) -> Result<()>
-    where
-        C: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
-    {
-        self.client.delete(command);
-        Ok(())
-    }
-
     /// Returns all available pods in the cluster via the name label.
     pub fn get_current_pods(&self) -> Vec<Pod> {
         let current_pods: ObjectList<Pod> = self.client.list_labeled(&format!(
@@ -101,7 +80,9 @@ where
     /// Returns all available nodes in the cluster. Can be used to determine the expected pods
     /// for tests (depending on the custom resource)
     pub fn get_available_nodes(&self) -> Vec<Node> {
-        let available_nodes: ObjectList<Node> = self.client.list_labeled("");
+        let available_nodes: ObjectList<Node> = self
+            .client
+            .list_labeled("kubernetes.io/arch=stackable-linux");
         available_nodes.items
     }
 
@@ -156,7 +137,7 @@ where
                 for condition in conditions {
                     if condition.type_ == self.options.cluster_ready_condition_type
                         // TODO: use operator-rs ConditionStatus?
-                        && condition.status == *"False"
+                        && condition.status == "False"
                     {
                         let created_pods = self.get_current_pods();
 
@@ -181,5 +162,22 @@ where
             "Cluster did not startup within the specified timeout of {} second(s)",
             self.timeouts.cluster_ready.as_secs()
         ))
+    }
+}
+
+/// This will clean up the custom resource, pods and commands (via OwnerReference) belonging
+/// to the cluster each time a single test is finished.
+impl<T> Drop for TestCluster<T>
+where
+    T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
+{
+    fn drop(&mut self) {
+        if let Some(cluster) = self.cluster.take() {
+            self.client.delete(cluster);
+            match self.wait_for_pods_terminated() {
+                Err(err) => println!("{}", err.to_string()),
+                _ => {}
+            }
+        }
     }
 }
