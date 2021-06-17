@@ -174,9 +174,8 @@ where
     fn drop(&mut self) {
         if let Some(cluster) = self.cluster.take() {
             self.client.delete(cluster);
-            match self.wait_for_pods_terminated() {
-                Err(err) => println!("{}", err.to_string()),
-                _ => {}
+            if let Err(err) = self.wait_for_pods_terminated() {
+                println!("{}", err.to_string())
             }
         }
     }
