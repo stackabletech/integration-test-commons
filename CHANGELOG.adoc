@@ -3,11 +3,13 @@
 == 0.1.0 - 2021-06-10
 
 :2: https://github.com/stackabletech/integration-test-commons/pull/2[#2]
+:3: https://github.com/stackabletech/integration-test-commons/pull/4[#3]
 
 === Added
 * Module `test` copied and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ({2}).
 * Crate documented ({2}).
 * Unit tests created ({2}).
+* TestCluster merged from spark-operator-integration-tests, and zookeeper-operator-integration-tests ({3})
 
 === Fixed
 * Doctests fixed ({2}).
