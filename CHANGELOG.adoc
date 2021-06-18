@@ -18,3 +18,4 @@
 * Dependency `kube` set to version `0.52` ({2}).
 * `KubeClient::find` renamed to `KubeClient::find_namespaced` ({2}).
 * `KubeClient::find_crd` generalized and renamed to `KubeClient::find` ({2}).
+* Dependency `kube` set to version `0.56` ({3}).
