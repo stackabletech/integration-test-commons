@@ -1,15 +1,25 @@
 = Changelog
 
+== 0.2.0 - unreleased
+
+:4: https://github.com/stackabletech/integration-test-commons/pull/4[#4]
+
+=== Added
+* TestCluster merged from spark-operator-integration-tests and zookeeper-operator-integration-tests ({4})
+
+=== Fixed
+
+=== Changed
+* Dependency `kube` set to version `0.56` ({4}).
+
 == 0.1.0 - 2021-06-10
 
 :2: https://github.com/stackabletech/integration-test-commons/pull/2[#2]
-:3: https://github.com/stackabletech/integration-test-commons/pull/4[#3]
 
 === Added
 * Module `test` copied and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ({2}).
 * Crate documented ({2}).
 * Unit tests created ({2}).
-* TestCluster merged from spark-operator-integration-tests, and zookeeper-operator-integration-tests ({3})
 
 === Fixed
 * Doctests fixed ({2}).
@@ -18,4 +28,3 @@
 * Dependency `kube` set to version `0.52` ({2}).
 * `KubeClient::find` renamed to `KubeClient::find_namespaced` ({2}).
 * `KubeClient::find_crd` generalized and renamed to `KubeClient::find` ({2}).
-* Dependency `kube` set to version `0.56` ({3}).
