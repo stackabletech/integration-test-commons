@@ -147,7 +147,7 @@ where
 
                         for pod in &created_pods {
                             // TODO: switch to pod condition type enum from operator-rs?
-                            self.client.verify_pod_condition(pod, "Ready")
+                            self.client.verify_pod_condition(pod, "Ready");
                         }
 
                         println!("Installation finished");
