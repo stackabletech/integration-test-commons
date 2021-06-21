@@ -44,4 +44,5 @@
 //! }
 //! ```
 
+pub mod operator;
 pub mod test;

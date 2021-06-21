@@ -11,7 +11,7 @@ use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::{
 use kube::api::{
     Api, DeleteParams, ListParams, ObjectList, Patch, PatchParams, PostParams, WatchEvent,
 };
-use kube::{Client, Resource};
+use kube::{Client, Resource, ResourceExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
@@ -73,7 +73,7 @@ impl TestKubeClient {
             self.kube_client
                 .apply_crd(crd)
                 .await
-                .expect("Custom resource definition coult not be applied")
+                .expect("Custom resource definition could not be applied")
         })
     }
 
