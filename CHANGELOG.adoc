@@ -1,6 +1,6 @@
 = Changelog
 
-== 0.2.0 - unreleased
+== 0.2.0 - 2021-06-22
 
 :4: https://github.com/stackabletech/integration-test-commons/pull/4[#4]
 :5: https://github.com/stackabletech/integration-test-commons/pull/5[#5]
