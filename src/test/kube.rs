@@ -153,13 +153,44 @@ impl TestKubeClient {
         })
     }
 
-    /// Verifies that the given pod condition becomes true within the specified timeout.
-    pub fn verify_pod_condition(&self, pod: &Pod, condition_type: &str) {
+    /// Verifies that the given pod condition becomes true within the
+    /// specified timeout.
+    pub fn verify_pod_condition(&self, pod: &Pod, condition_type: &str) -> Pod {
         self.runtime.block_on(async {
             self.kube_client
                 .verify_pod_condition(pod, condition_type)
                 .await
                 .expect("Pod condition could not be verified")
+        })
+    }
+
+    /// Verifies that the status of a resource fulfills the given
+    /// predicate within the specified timeout.
+    pub fn verify_status<K, P>(&self, resource: &K, predicate: P) -> K
+    where
+        P: Fn(&K) -> bool,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
+    {
+        self.runtime.block_on(async {
+            self.kube_client
+                .verify_status(resource, predicate)
+                .await
+                .expect("Resource did not reach the expected status")
+        })
+    }
+
+    /// Returns the given resource with an updated status.
+    pub fn get_status<K>(&self, resource: &K) -> K
+    where
+        K: DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
+    {
+        self.runtime.block_on(async {
+            self.kube_client
+                .get_status(resource)
+                .await
+                .expect("Status could not be retrieved")
         })
     }
 
@@ -197,7 +228,7 @@ pub struct Timeouts {
     pub create: Duration,
     pub delete: Duration,
     pub get_annotation: Duration,
-    pub verify_pod_condition: Duration,
+    pub verify_status: Duration,
 }
 
 impl Default for Timeouts {
@@ -207,7 +238,7 @@ impl Default for Timeouts {
             create: Duration::from_secs(10),
             delete: Duration::from_secs(10),
             get_annotation: Duration::from_secs(10),
-            verify_pod_condition: Duration::from_secs(30),
+            verify_status: Duration::from_secs(30),
         }
     }
 }
@@ -248,6 +279,11 @@ impl KubeClient {
         let timeout_secs = self.timeouts.apply_crd.as_secs() as u32;
         let crds: Api<CustomResourceDefinition> = Api::all(self.client.clone());
 
+        let lp = ListParams::default()
+            .fields(&format!("metadata.name={}", crd.name()))
+            .timeout(timeout_secs);
+        let mut stream = crds.watch(&lp, "0").await?.boxed();
+
         let apply_params = PatchParams::apply("agent_integration_test").force();
         crds.patch(&crd.name(), &apply_params, &Patch::Apply(crd))
             .await?;
@@ -255,11 +291,6 @@ impl KubeClient {
         if crds.get(&crd.name()).await.is_ok() {
             return Ok(());
         }
-
-        let lp = ListParams::default()
-            .fields(&format!("metadata.name={}", crd.name()))
-            .timeout(timeout_secs);
-        let mut stream = crds.watch(&lp, "0").await?.boxed();
 
         while let Some(status) = stream.try_next().await? {
             if let WatchEvent::Modified(crd) = status {
@@ -320,13 +351,14 @@ impl KubeClient {
         let timeout_secs = self.timeouts.create.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
 
-        let resource = from_yaml(spec);
-        api.create(&PostParams::default(), &resource).await?;
+        let resource: K = from_yaml(spec);
 
         let list_params = ListParams::default()
             .fields(&format!("metadata.name={}", resource.name()))
             .timeout(timeout_secs);
         let mut stream = api.watch(&list_params, "0").await?.boxed();
+
+        api.create(&PostParams::default(), &resource).await?;
 
         while let Some(status) = stream.try_next().await? {
             if let WatchEvent::Added(resource) = status {
@@ -350,6 +382,11 @@ impl KubeClient {
         let timeout_secs = self.timeouts.delete.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
 
+        let list_params = ListParams::default()
+            .fields(&format!("metadata.name={}", resource.name()))
+            .timeout(timeout_secs);
+        let mut stream = api.watch(&list_params, "0").await?.boxed();
+
         let result = api
             .delete(&resource.name(), &DeleteParams::default())
             .await?;
@@ -357,11 +394,6 @@ impl KubeClient {
         if result.is_right() {
             return Ok(());
         }
-
-        let list_params = ListParams::default()
-            .fields(&format!("metadata.name={}", resource.name()))
-            .timeout(timeout_secs);
-        let mut stream = api.watch(&list_params, "0").await?.boxed();
 
         while let Some(status) = stream.try_next().await? {
             if let WatchEvent::Deleted(_) = status {
@@ -419,40 +451,60 @@ impl KubeClient {
     }
 
     /// Verifies that the given pod condition becomes true within the specified timeout.
-    pub async fn verify_pod_condition(&self, pod: &Pod, condition_type: &str) -> Result<()> {
+    pub async fn verify_pod_condition(&self, pod: &Pod, condition_type: &str) -> Result<Pod> {
         let is_condition_true = |pod: &Pod| {
             get_pod_conditions(pod)
                 .iter()
                 .any(|condition| condition.type_ == condition_type && condition.status == "True")
         };
+        self.verify_status(pod, is_condition_true).await
+    }
 
-        let timeout_secs = self.timeouts.verify_pod_condition.as_secs() as u32;
-        let pods: Api<Pod> = Api::namespaced(self.client.clone(), &self.namespace);
+    /// Verifies that the status of a resource fulfills the given
+    /// predicate within the specified timeout.
+    pub async fn verify_status<K, P>(&self, resource: &K, predicate: P) -> Result<K>
+    where
+        P: Fn(&K) -> bool,
+        K: Clone + Debug + DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
+    {
+        let timeout_secs = self.timeouts.verify_status.as_secs() as u32;
+        let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
 
         let lp = ListParams::default()
-            .fields(&format!("metadata.name={}", pod.name()))
+            .fields(&format!("metadata.name={}", resource.name()))
             .timeout(timeout_secs);
-        let mut stream = pods.watch(&lp, "0").await?.boxed();
+        let mut stream = api.watch(&lp, "0").await?.boxed();
 
-        let pod = pods.get_status(&pod.name()).await?;
+        let resource = api.get_status(&resource.name()).await?;
 
-        if is_condition_true(&pod) {
-            return Ok(());
+        if predicate(&resource) {
+            return Ok(resource);
         }
 
         while let Some(status) = stream.try_next().await? {
-            if let WatchEvent::Modified(pod) = status {
-                if is_condition_true(&pod) {
-                    return Ok(());
+            if let WatchEvent::Modified(resource) = status {
+                if predicate(&resource) {
+                    return Ok(resource);
                 }
             }
         }
 
         Err(anyhow!(
-            "Pod condition [{}] was not satisfied within {} seconds",
-            condition_type,
+            "Resource [{}] did not reach the expected status within {} seconds.",
+            resource.name(),
             timeout_secs
         ))
+    }
+
+    /// Returns the given resource with an updated status.
+    pub async fn get_status<K>(&self, resource: &K) -> Result<K>
+    where
+        K: DeserializeOwned + Resource,
+        <K as Resource>::DynamicType: Default,
+    {
+        let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
+        Ok(api.get_status(&resource.name()).await?)
     }
 
     /// Returns the logs for the given pod.

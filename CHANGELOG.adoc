@@ -3,14 +3,20 @@
 == 0.2.0 - unreleased
 
 :4: https://github.com/stackabletech/integration-test-commons/pull/4[#4]
+:5: https://github.com/stackabletech/integration-test-commons/pull/5[#5]
 
 === Added
-* TestCluster merged from spark-operator-integration-tests and zookeeper-operator-integration-tests ({4})
+* TestCluster merged from spark-operator-integration-tests and zookeeper-operator-integration-tests ({4}).
+* `test::kube::KubeClient::verify_status` and `test::kube::KubeClient::get_status` added ({5}).
+* All modules in `k8s_openapi::api::core::v1` re-exported in `test::prelude` ({5}).
 
 === Fixed
+* Race conditions in `test::kube::KubeClient` fixed ({5}).
 
 === Changed
 * Dependency `kube` set to version `0.56` ({4}).
+* `test::kube::Timeouts::verify_pod_condition` renamed to `verify_status` ({5}).
+
 
 == 0.1.0 - 2021-06-10
 
