@@ -45,7 +45,7 @@ pub fn setup_repository(client: &TestKubeClient) {
     // Executing this multiple times can cause issues with K3s, so we ensure
     // that the code is only executed once, regardless of how many test cases
     // try to create the repository
-    if let Ok(_) = REPO_CREATED.set(true) {
+    if REPO_CREATED.set(true).is_ok() {
         client.apply_crd(&Repository::crd());
         client.apply::<Repository>(REPO_SPEC);
     };
