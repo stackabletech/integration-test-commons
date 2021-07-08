@@ -3,6 +3,7 @@
 use super::prelude::{KubeClient, TestKubeClient};
 use anyhow::Result;
 use kube_derive::CustomResource;
+use once_cell::sync::OnceCell;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -37,9 +38,17 @@ pub enum RepoType {
     StackableRepo,
 }
 
+static REPO_CREATED: OnceCell<bool> = OnceCell::new();
+
+#[allow(unused_must_use)]
 pub fn setup_repository(client: &TestKubeClient) {
-    client.apply_crd(&Repository::crd());
-    client.apply::<Repository>(REPO_SPEC);
+    // Executing this multiple times can cause issues with K3s, so we ensure
+    // that the code is only executed once, regardless of how many test cases
+    // try to create the repository
+    if REPO_CREATED.set(true).is_ok() {
+        client.apply_crd(&Repository::crd());
+        client.apply::<Repository>(REPO_SPEC);
+    };
 }
 
 pub async fn setup_repository_async(client: &KubeClient) -> Result<()> {
