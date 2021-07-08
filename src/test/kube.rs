@@ -414,13 +414,7 @@ impl KubeClient {
         K: Clone + Debug + DeserializeOwned + Resource,
         <K as Resource>::DynamicType: Default,
     {
-        let get_value = |resource: &K| {
-            resource
-                .meta()
-                .annotations
-                .as_ref()
-                .and_then(|annotations| annotations.get(key).cloned())
-        };
+        let get_value = |resource: &K| resource.meta().annotations.get(key).cloned();
 
         let timeout_secs = self.timeouts.get_annotation.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
@@ -558,44 +552,47 @@ pub fn with_unique_name(yaml: &str) -> String {
 
 /// Returns the conditions of the given node.
 pub fn get_node_conditions(node: &Node) -> Vec<NodeCondition> {
-    node.status
-        .as_ref()
-        .and_then(|status| status.conditions.clone())
-        .unwrap_or_else(Vec::new)
+    if let Some(status) = &node.status {
+        status.conditions.clone()
+    } else {
+        vec![]
+    }
 }
 
 /// Returns the conditions of the given pod.
 pub fn get_pod_conditions(pod: &Pod) -> Vec<PodCondition> {
-    pod.status
-        .as_ref()
-        .and_then(|status| status.conditions.clone())
-        .unwrap_or_else(Vec::new)
+    if let Some(status) = &pod.status {
+        status.conditions.clone()
+    } else {
+        vec![]
+    }
 }
 
 /// Returns the conditions of the given custom resource definition.
 pub fn get_crd_conditions(
     crd: &CustomResourceDefinition,
 ) -> Vec<CustomResourceDefinitionCondition> {
-    crd.status
-        .as_ref()
-        .and_then(|status| status.conditions.clone())
-        .unwrap_or_else(Vec::new)
+    if let Some(status) = &crd.status {
+        status.conditions.clone()
+    } else {
+        vec![]
+    }
 }
 
 /// Returns the taints of the given node.
 pub fn get_node_taints(node: &Node) -> Vec<Taint> {
-    node.spec
-        .as_ref()
-        .and_then(|spec| spec.taints.clone())
-        .unwrap_or_else(Vec::new)
+    if let Some(spec) = &node.spec {
+        spec.taints.clone()
+    } else {
+        vec![]
+    }
 }
 
 /// Returns the number of allocatable pods of the given node.
 pub fn get_allocatable_pods(node: &Node) -> u32 {
     node.status
         .as_ref()
-        .and_then(|status| status.allocatable.as_ref())
-        .and_then(|allocatable| allocatable.get("pods"))
-        .and_then(|allocatable_pods| allocatable_pods.0.parse().ok())
+        .and_then(|status| status.allocatable.get("pods"))
+        .and_then(|quantity| quantity.0.parse().ok())
         .unwrap_or_default()
 }

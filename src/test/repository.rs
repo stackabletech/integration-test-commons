@@ -2,6 +2,7 @@
 
 use super::prelude::{KubeClient, TestKubeClient};
 use anyhow::Result;
+use kube::CustomResourceExt;
 use kube_derive::CustomResource;
 use once_cell::sync::OnceCell;
 use schemars::JsonSchema;
