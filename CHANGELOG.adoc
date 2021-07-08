@@ -1,5 +1,18 @@
 = Changelog
 
+== 0.2.1 - unreleased
+
+:6: https://github.com/stackabletech/integration-test-commons/pull/6[#6]
+
+=== Added
+
+=== Fixed
+
+=== Changed
+* Dependency `k8s-openapi` set to version `0.12` ({6}).
+* Dependency `kube` set to version `0.57` ({6}).
+* Dependency `tokio` set to version `1.8` ({6}).
+
 == 0.2.0 - 2021-06-22
 
 :4: https://github.com/stackabletech/integration-test-commons/pull/4[#4]
