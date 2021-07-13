@@ -5,13 +5,14 @@
 :8: https://github.com/stackabletech/integration-test-commons/pull/8[#8]
 :9: https://github.com/stackabletech/integration-test-commons/pull/9[#9]
 :10: https://github.com/stackabletech/integration-test-commons/pull/10[#10]
+:11: https://github.com/stackabletech/integration-test-commons/pull/11[#11]
 
 === Removed
 * Kubernetes version feature removed from the k8s-openapi dependency. It
   must be set by the binary crate which uses this library ({10}).
 
 === Fixed
-* Add synchronization to create the integration test repository only once per test file ({8}).
+* Add synchronization to create the integration test repository only once per test file ({8}, {11}).
 
 === Changed
 * Dependency `k8s-openapi` set to version `0.12` ({9}).
