@@ -39,13 +39,13 @@ pub enum RepoType {
     StackableRepo,
 }
 
+// Setting up the repository multiple times can cause issues with K3s,
+// so we ensure that the code is only executed once, regardless of how
+// many test cases try to create the repository.
 static REPO_CREATED: OnceCell<bool> = OnceCell::new();
 
 #[allow(unused_must_use)]
 pub fn setup_repository(client: &TestKubeClient) {
-    // Executing this multiple times can cause issues with K3s, so we ensure
-    // that the code is only executed once, regardless of how many test cases
-    // try to create the repository
     if REPO_CREATED.set(true).is_ok() {
         client.apply_crd(&Repository::crd());
         client.apply::<Repository>(REPO_SPEC);
@@ -53,7 +53,9 @@ pub fn setup_repository(client: &TestKubeClient) {
 }
 
 pub async fn setup_repository_async(client: &KubeClient) -> Result<()> {
-    client.apply_crd(&Repository::crd()).await?;
-    client.apply::<Repository>(REPO_SPEC).await?;
+    if REPO_CREATED.set(true).is_ok() {
+        client.apply_crd(&Repository::crd()).await?;
+        client.apply::<Repository>(REPO_SPEC).await?;
+    };
     Ok(())
 }
