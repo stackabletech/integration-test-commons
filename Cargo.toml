@@ -4,7 +4,7 @@ description = "Common functions used in the integration tests of the Stackable c
 edition = "2018"
 license = "Apache-2.0"
 name = "integration-test-commons"
-version = "0.2.0"
+version = "0.3.0"
 
 [dependencies]
 anyhow = "1.0"
