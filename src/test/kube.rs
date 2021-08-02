@@ -424,7 +424,7 @@ impl KubeClient {
             .timeout(timeout_secs);
         let mut stream = api.watch(&lp, "0").await?.boxed();
 
-        if let Some(value) = get_value(&resource) {
+        if let Some(value) = get_value(resource) {
             return Ok(value);
         }
 
