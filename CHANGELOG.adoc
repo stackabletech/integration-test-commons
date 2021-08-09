@@ -1,5 +1,12 @@
 = Changelog
 
+== 0.4.0 - unreleased
+
+:15: https://github.com/stackabletech/integration-test-commons/pull/15[#15]
+
+=== Changed
+* Dependency `kube` set to version `0.58` ({15}).
+
 == 0.3.0 - 2021-07-13
 
 :8: https://github.com/stackabletech/integration-test-commons/pull/8[#8]
