@@ -129,7 +129,7 @@ where
         let name = self.cluster.as_ref().unwrap().name();
 
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
-            println!("Waiting for [{}/{}] to be ready...", T::kind(&()), name);
+            print!("Waiting for [{}/{}] to be ready. ", T::kind(&()), name);
 
             let cluster: T = self.client.find_namespaced(&name).unwrap();
 
@@ -142,6 +142,7 @@ where
                         let created_pods = self.get_current_pods();
 
                         if created_pods.len() != expected_pod_count {
+                            println!("{} of {} are ready", created_pods.len(), expected_pod_count);
                             break;
                         }
 
@@ -150,10 +151,15 @@ where
                             self.client.verify_pod_condition(pod, "Ready");
                         }
 
-                        println!("Installation finished");
+                        println!(". Installation finished");
                         return Ok(());
                     }
                 }
+            } else {
+                println!(
+                    " Condition [{}] missing",
+                    self.options.cluster_ready_condition_type
+                );
             }
             thread::sleep(Duration::from_secs(2));
         }
