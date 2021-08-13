@@ -142,7 +142,11 @@ where
                         let created_pods = self.get_current_pods();
 
                         if created_pods.len() != expected_pod_count {
-                            println!("{} of {} are ready", created_pods.len(), expected_pod_count);
+                            println!(
+                                "{} of {} pods are ready",
+                                created_pods.len(),
+                                expected_pod_count
+                            );
                             break;
                         }
 
@@ -151,13 +155,13 @@ where
                             self.client.verify_pod_condition(pod, "Ready");
                         }
 
-                        println!(". Installation finished");
+                        println!("Installation finished");
                         return Ok(());
                     }
                 }
             } else {
                 println!(
-                    " Condition [{}] missing",
+                    "Condition [{}] missing",
                     self.options.cluster_ready_condition_type
                 );
             }
