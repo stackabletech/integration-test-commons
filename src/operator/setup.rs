@@ -122,14 +122,15 @@ where
     }
 
     /// Wait for the `expected_pod_count` count to become ready or return an error if they fail to
-    /// do so after a certain time.
+    /// do so after a certain time. The amount of time, it waits is configured by the user in the
+    /// `cluster_ready` field of the `TestClusterTimeouts`.
     pub fn wait_ready(&self, expected_pod_count: usize) -> Result<()> {
         let now = Instant::now();
 
         let name = self.cluster.as_ref().unwrap().name();
 
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
-            print!("Waiting for [{}/{}] to be ready. ", T::kind(&()), name);
+            print!("Waiting for [{}/{}] to be ready...", T::kind(&()), name);
             let created_pods = self.get_current_pods();
 
             if created_pods.len() != expected_pod_count {
@@ -144,7 +145,7 @@ where
                     self.client.verify_pod_condition(pod, "Ready");
                 }
 
-                println!("Installation finished");
+                println!("\nInstallation finished");
                 return Ok(());
             }
             thread::sleep(Duration::from_secs(2));
