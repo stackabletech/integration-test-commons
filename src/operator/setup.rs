@@ -121,9 +121,14 @@ where
         Ok(())
     }
 
-    /// Wait for the `expected_pod_count` count to become ready or return an error if they fail to
-    /// do so after a certain time. The amount of time, it waits is configured by the user in the
+    /// Wait for the `expected_pod_count` pods to become ready or return an error if they fail to
+    /// do so after a certain time. The amount of time it waits is configured by the user in the
     /// `cluster_ready` field of the `TestClusterTimeouts`.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `expected_pod_count` - Number of pods to wait for until they become ready.
+    /// 
     pub fn wait_ready(&self, expected_pod_count: usize) -> Result<()> {
         let now = Instant::now();
 
