@@ -109,22 +109,23 @@ where
 
     /// Write a formatted message with cluster kind and cluster name in the beginning to the console.
     fn log(&self, message: &str) {
-        println!(
-            "[{}/{}] {}",
-            T::kind(&()),
-            T::name(self.cluster.as_ref().unwrap()),
-            message
-        );
+        let cluster_name = if self.cluster.is_some() {
+            T::name(self.cluster.as_ref().unwrap())
+        } else {
+            "<not-found>".to_string()
+        };
+        println!("[{}/{}] {}", T::kind(&()), cluster_name, message);
     }
 
     /// Write a formatted string with cluster kind and cluster name in the beginning.
     fn log_err(&self, message: &str) -> String {
-        format!(
-            "[{}/{}] {}",
-            T::kind(&()),
-            T::name(self.cluster.as_ref().unwrap().meta()),
-            message
-        )
+        let cluster_name = if self.cluster.is_some() {
+            T::name(self.cluster.as_ref().unwrap())
+        } else {
+            "<not-found>".to_string()
+        };
+
+        format!("[{}/{}] {}", T::kind(&()), cluster_name, message)
     }
 
     /// Check if all pods have the provided version. May be used to check the version update result.
