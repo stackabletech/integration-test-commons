@@ -98,39 +98,31 @@ where
                 return Ok(());
             }
 
-            self.log(&format!("Waiting for {} Pod(s) to terminate", pods.len()));
+            println!(
+                "{}",
+                self.log(&format!("Waiting for {} Pod(s) to terminate", pods.len()))
+            );
             thread::sleep(Duration::from_secs(1));
         }
 
-        Err(anyhow!(self.log_err(&format!(
+        Err(anyhow!(self.log(&format!(
             "Pods did not terminate within the specified timeout of {} second(s)",
             self.timeouts.pods_terminated.as_secs()
         ))))
     }
 
     /// Write a formatted message with cluster kind and cluster name in the beginning to the console.
-    fn log(&self, message: &str) {
+    fn log(&self, message: &str) -> String {
         let cluster_name = if self.cluster.is_some() {
             T::name(self.cluster.as_ref().unwrap())
         } else {
             "<not-found>".to_string()
         };
-        println!("[{}/{}] {}", T::kind(&()), cluster_name, message);
-    }
-
-    /// Create a formatted string with cluster kind and cluster name in the beginning.
-    /// (For anyhow! error logging)
-    fn log_err(&self, message: &str) -> String {
-        let cluster_name = if self.cluster.is_some() {
-            T::name(self.cluster.as_ref().unwrap())
-        } else {
-            "<not-found>".to_string()
-        };
-
         format!("[{}/{}] {}", T::kind(&()), cluster_name, message)
     }
 
-    /// Check if all pods have the provided version. May be used to check the version update results.
+    /// Check if all pods have the provided version parameter in the `APP_VERSION_LABEL` label.
+    /// May be used to check the for the correct version after cluster updates.
     pub fn check_pod_version(&self, version: &str) -> Result<()> {
         for pod in &self.get_current_pods() {
             if let Some(pod_version) = pod
@@ -139,7 +131,7 @@ where
                 .get(stackable_operator::labels::APP_VERSION_LABEL)
             {
                 if version != pod_version {
-                    return Err(anyhow!(self.log_err(&format!(
+                    return Err(anyhow!(self.log(&format!(
                         "Pod [{}] has version [{}] but should have version [{}]. This should not happen!",
                         pod.metadata.name.as_ref().unwrap(),
                         pod_version,
@@ -166,7 +158,7 @@ where
             let pod_creation_timestamp = &pod.metadata.creation_timestamp;
 
             if pod_creation_timestamp < creation_timestamp {
-                return Err(anyhow!(self.log_err(
+                return Err(anyhow!(self.log(
                 &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
                 pod.metadata.name.as_ref().unwrap(),
                 pod_creation_timestamp,
@@ -206,11 +198,14 @@ where
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
             let created_pods = self.get_current_pods();
 
-            self.log(&format!(
-                "Waiting for [{}/{}] pod(s) to be ready...",
-                created_pods.len(),
-                expected_pod_count
-            ));
+            println!(
+                "{}",
+                self.log(&format!(
+                    "Waiting for [{}/{}] pod(s) to be ready...",
+                    created_pods.len(),
+                    expected_pod_count
+                )),
+            );
 
             if created_pods.len() != expected_pod_count {
                 thread::sleep(Duration::from_secs(2));
@@ -220,12 +215,12 @@ where
                     // TODO: switch to pod condition type enum from operator-rs?
                     self.client.verify_pod_condition(pod, "Ready");
                 }
-                self.log("Installation finished");
+                println!("{}", self.log("Installation finished"));
                 return Ok(());
             }
         }
 
-        Err(anyhow!(self.log_err(&format!(
+        Err(anyhow!(self.log(&format!(
             "Cluster did not startup within the specified timeout of {} second(s)",
             self.timeouts.cluster_ready.as_secs()
         ))))
@@ -242,7 +237,7 @@ where
         if let Some(cluster) = self.cluster.take() {
             self.client.delete(cluster);
             if let Err(err) = self.wait_for_pods_terminated() {
-                self.log(&err.to_string())
+                self.log(&err.to_string());
             }
         }
     }
