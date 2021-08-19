@@ -112,7 +112,7 @@ where
         println!(
             "[{}/{}] {}",
             T::kind(&()),
-            T::name(self.cluster.as_ref().unwrap()),
+            T::name(self.cluster.as_ref().unwrap_or("<name-not-found>")),
             message
         );
     }
@@ -122,7 +122,7 @@ where
         format!(
             "[{}/{}] {}",
             T::kind(&()),
-            T::name(self.cluster.as_ref().unwrap()),
+            T::name(self.cluster.as_ref().unwrap_or("<name-not-found>")),
             message
         )
     }
