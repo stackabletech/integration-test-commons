@@ -121,49 +121,37 @@ where
         Ok(())
     }
 
-    /// A "busy" (2 second sleep) wait for the cluster to be ready. We check the condition_type
-    /// and the expected pods that should be up and running.
+    /// Wait for the `expected_pod_count` pods to become ready or return an error if they fail to
+    /// do so after a certain time. The amount of time it waits is configured by the user in the
+    /// `cluster_ready` field of the `TestClusterTimeouts`.
+    ///
+    /// # Arguments
+    ///
+    /// * `expected_pod_count` - Number of pods to wait for until they become ready.
+    ///
     pub fn wait_ready(&self, expected_pod_count: usize) -> Result<()> {
         let now = Instant::now();
 
         let name = self.cluster.as_ref().unwrap().name();
 
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
-            print!("Waiting for [{}/{}] to be ready. ", T::kind(&()), name);
+            print!("Waiting for [{}/{}] to be ready...", T::kind(&()), name);
+            let created_pods = self.get_current_pods();
 
-            let cluster: T = self.client.find_namespaced(&name).unwrap();
-
-            if let Some(conditions) = cluster.conditions() {
-                for condition in conditions {
-                    if condition.type_ == self.options.cluster_ready_condition_type
-                        // TODO: use operator-rs ConditionStatus?
-                        && condition.status == "False"
-                    {
-                        let created_pods = self.get_current_pods();
-
-                        if created_pods.len() != expected_pod_count {
-                            println!(
-                                "{} of {} pods are ready",
-                                created_pods.len(),
-                                expected_pod_count
-                            );
-                            break;
-                        }
-
-                        for pod in &created_pods {
-                            // TODO: switch to pod condition type enum from operator-rs?
-                            self.client.verify_pod_condition(pod, "Ready");
-                        }
-
-                        println!("Installation finished");
-                        return Ok(());
-                    }
-                }
-            } else {
+            if created_pods.len() != expected_pod_count {
                 println!(
-                    "Condition [{}] missing",
-                    self.options.cluster_ready_condition_type
+                    "{} of {} pods created.",
+                    created_pods.len(),
+                    expected_pod_count
                 );
+            } else {
+                for pod in &created_pods {
+                    // TODO: switch to pod condition type enum from operator-rs?
+                    self.client.verify_pod_condition(pod, "Ready");
+                }
+
+                println!("\nInstallation finished");
+                return Ok(());
             }
             thread::sleep(Duration::from_secs(2));
         }
