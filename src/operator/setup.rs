@@ -129,8 +129,8 @@ where
     }
 
     /// Check if all pods have the provided version. May be used to check the version update result.
-    pub fn check_version(&self, version: &str, pods: &[Pod]) -> Result<()> {
-        for pod in pods {
+    pub fn check_pod_version(&self, version: &str) -> Result<()> {
+        for pod in &self.get_current_pods() {
             if let Some(pod_version) = pod
                 .metadata
                 .labels
@@ -157,8 +157,8 @@ where
         Ok(())
     }
 
-    /// Check if the creation timestamps of all pods are older thant the provided timestamp.
-    pub fn check_creation_timestamp(&self, creation_timestamp: &str) -> Result<()> {
+    /// Check if the creation timestamps of all pods are older than the provided timestamp.
+    pub fn check_pod_creation_timestamp(&self, creation_timestamp: &str) -> Result<()> {
         for pod in &self.get_current_pods() {
             let pod_creation_timestamp = pod
                 .metadata
@@ -170,7 +170,7 @@ where
 
             if pod_creation_timestamp.as_str() < creation_timestamp {
                 return Err(anyhow!(self.log_err(
-                &format!("Pod [{}] has an older timestamp [{:?}] than provided timestamp [{:?}]. This should not be happening!",
+                &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
                 pod.metadata.name.as_ref().unwrap(),
                 pod_creation_timestamp,
                 creation_timestamp,
