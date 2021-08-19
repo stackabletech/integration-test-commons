@@ -122,7 +122,7 @@ where
         format!(
             "[{}/{}] {}",
             T::kind(&()),
-            T::name(self.cluster.as_ref().unwrap().meta()),
+            T::name(self.cluster.as_ref().unwrap()),
             message
         )
     }
