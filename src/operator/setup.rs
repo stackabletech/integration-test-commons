@@ -1,6 +1,7 @@
 use crate::test::prelude::{Node, Pod, TestKubeClient};
 
 use anyhow::{anyhow, Result};
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
 use kube::api::ObjectList;
 use kube::{Resource, ResourceExt};
 use serde::de::DeserializeOwned;
@@ -117,7 +118,8 @@ where
         println!("[{}/{}] {}", T::kind(&()), cluster_name, message);
     }
 
-    /// Write a formatted string with cluster kind and cluster name in the beginning.
+    /// Create a formatted string with cluster kind and cluster name in the beginning.
+    /// (For anyhow! error logging)
     fn log_err(&self, message: &str) -> String {
         let cluster_name = if self.cluster.is_some() {
             T::name(self.cluster.as_ref().unwrap())
@@ -128,7 +130,7 @@ where
         format!("[{}/{}] {}", T::kind(&()), cluster_name, message)
     }
 
-    /// Check if all pods have the provided version. May be used to check the version update result.
+    /// Check if all pods have the provided version. May be used to check the version update results.
     pub fn check_pod_version(&self, version: &str) -> Result<()> {
         for pod in &self.get_current_pods() {
             if let Some(pod_version) = pod
@@ -158,17 +160,12 @@ where
     }
 
     /// Check if the creation timestamps of all pods are older than the provided timestamp.
-    pub fn check_pod_creation_timestamp(&self, creation_timestamp: &str) -> Result<()> {
+    /// Maybe used with testing commands like Restart etc.
+    pub fn check_pod_creation_timestamp(&self, creation_timestamp: &Option<Time>) -> Result<()> {
         for pod in &self.get_current_pods() {
-            let pod_creation_timestamp = pod
-                .metadata
-                .creation_timestamp
-                .as_ref()
-                .unwrap()
-                .0
-                .to_string();
+            let pod_creation_timestamp = &pod.metadata.creation_timestamp;
 
-            if pod_creation_timestamp.as_str() < creation_timestamp {
+            if pod_creation_timestamp < creation_timestamp {
                 return Err(anyhow!(self.log_err(
                 &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
                 pod.metadata.name.as_ref().unwrap(),
