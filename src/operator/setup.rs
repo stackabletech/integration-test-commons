@@ -1,12 +1,10 @@
-use crate::test::prelude::{Node, Pod, TestKubeClient};
+use crate::test::prelude::{ConfigMap, Node, Pod, TestKubeClient};
 
 use anyhow::{anyhow, Result};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Time;
-use kube::api::ObjectList;
 use kube::{Resource, ResourceExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use stackable_operator::status::Conditions;
 use std::fmt::Debug;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -22,8 +20,7 @@ pub struct TestCluster<T: Clone + Debug + DeserializeOwned + Resource<DynamicTyp
 
 /// Some reoccurring common test cluster options.
 pub struct TestClusterOptions {
-    pub cluster_ready_condition_type: String,
-    pub pod_name_label: String,
+    pub cluster_type: String,
 }
 
 /// Some reoccurring common test cluster timeouts.
@@ -36,16 +33,6 @@ impl<T> TestCluster<T>
 where
     T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
 {
-    /// This creates a kube client and should be executed at the start of every test.
-    pub fn new(options: TestClusterOptions, timeouts: TestClusterTimeouts) -> Self {
-        TestCluster {
-            client: TestKubeClient::new(),
-            cluster: None,
-            options,
-            timeouts,
-        }
-    }
-
     /// Applies a custom resource, stores the returned cluster object and sleeps for
     /// two seconds to give the operator time to react on the custom resource.
     /// Without the sleep it can happen that tests run without any pods being created.
@@ -69,62 +56,28 @@ where
         Ok(cmd)
     }
 
-    /// Returns all available pods in the cluster via the name label.
-    pub fn get_current_pods(&self) -> Vec<Pod> {
-        let current_pods: ObjectList<Pod> = self.client.list_labeled(&format!(
-            "app.kubernetes.io/name={}",
-            &self.options.pod_name_label
-        ));
-        current_pods.items
-    }
+    /// Check if the creation timestamps of all pods are older than the provided timestamp.
+    /// Maybe used with testing commands like Restart etc.
+    pub fn check_pod_creation_timestamp(&self, creation_timestamp: &Option<Time>) -> Result<()> {
+        for pod in &self.list_pods() {
+            let pod_creation_timestamp = &pod.metadata.creation_timestamp;
 
-    /// Returns all available nodes in the cluster. Can be used to determine the expected pods
-    /// for tests (depending on the custom resource)
-    pub fn get_available_nodes(&self) -> Vec<Node> {
-        let available_nodes: ObjectList<Node> = self
-            .client
-            .list_labeled("kubernetes.io/arch=stackable-linux");
-        available_nodes.items
-    }
-
-    /// A "busy" wait for all pods to be terminated and cleaned up.
-    pub fn wait_for_pods_terminated(&self) -> Result<()> {
-        let now = Instant::now();
-
-        while now.elapsed().as_secs() < self.timeouts.pods_terminated.as_secs() {
-            let pods = self.get_current_pods();
-
-            if pods.is_empty() {
-                return Ok(());
+            if pod_creation_timestamp < creation_timestamp {
+                return Err(anyhow!(self.log(
+                &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
+                pod.metadata.name.as_ref().unwrap(),
+                pod_creation_timestamp,
+                creation_timestamp,
+            ))));
             }
-
-            println!(
-                "{}",
-                self.log(&format!("Waiting for {} Pod(s) to terminate", pods.len()))
-            );
-            thread::sleep(Duration::from_secs(1));
         }
 
-        Err(anyhow!(self.log(&format!(
-            "Pods did not terminate within the specified timeout of {} second(s)",
-            self.timeouts.pods_terminated.as_secs()
-        ))))
+        Ok(())
     }
-
-    /// Write a formatted message with cluster kind and cluster name in the beginning to the console.
-    fn log(&self, message: &str) -> String {
-        let cluster_name = if self.cluster.is_some() {
-            T::name(self.cluster.as_ref().unwrap())
-        } else {
-            "<not-found>".to_string()
-        };
-        format!("[{}/{}] {}", T::kind(&()), cluster_name, message)
-    }
-
     /// Check if all pods have the provided version parameter in the `APP_VERSION_LABEL` label.
     /// May be used to check the for the correct version after cluster updates.
     pub fn check_pod_version(&self, version: &str) -> Result<()> {
-        for pod in &self.get_current_pods() {
+        for pod in &self.list_pods() {
             if let Some(pod_version) = pod
                 .metadata
                 .labels
@@ -151,30 +104,6 @@ where
         Ok(())
     }
 
-    /// Check if the creation timestamps of all pods are older than the provided timestamp.
-    /// Maybe used with testing commands like Restart etc.
-    pub fn check_pod_creation_timestamp(&self, creation_timestamp: &Option<Time>) -> Result<()> {
-        for pod in &self.get_current_pods() {
-            let pod_creation_timestamp = &pod.metadata.creation_timestamp;
-
-            if pod_creation_timestamp < creation_timestamp {
-                return Err(anyhow!(self.log(
-                &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
-                pod.metadata.name.as_ref().unwrap(),
-                pod_creation_timestamp,
-                creation_timestamp,
-            ))));
-            }
-        }
-
-        Ok(())
-    }
-}
-
-impl<T> TestCluster<T>
-where
-    T: Clone + Conditions + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
-{
     /// Creates or updates a custom resource and waits for the cluster to be up and running
     /// within the provided timeout. Depending on the cluster definition we hand in the number
     /// of created pods we expect manually.
@@ -182,6 +111,103 @@ where
         self.apply(cluster)?;
         self.wait_ready(expected_pod_count)?;
         Ok(())
+    }
+
+    /// List all config map belonging to the cluster. Additional labels to filter or limit
+    /// the configmaps via label selector may be passed via `additional_labels`.
+    pub fn list_config_maps(&self, additional_labels: Vec<String>) -> Vec<ConfigMap> {
+        let mut labels = vec![];
+        if let Some(cluster) = &self.cluster {
+            labels.push(format!(
+                "{}={}",
+                stackable_operator::labels::APP_INSTANCE_LABEL,
+                cluster.name(),
+            ));
+        }
+
+        labels.push(format!(
+            "{}={}",
+            stackable_operator::labels::APP_NAME_LABEL,
+            &self.options.cluster_type
+        ));
+
+        labels.extend(additional_labels);
+
+        self.client
+            .list_labeled::<ConfigMap>(&labels.join(","))
+            .items
+    }
+
+    /// Returns all available nodes in the cluster. Can be used to determine the expected pods
+    /// for tests (depending on the custom resource)
+    pub fn list_nodes(&self) -> Vec<Node> {
+        self.client
+            .list_labeled::<Node>("kubernetes.io/arch=stackable-linux")
+            .items
+    }
+
+    /// List all available pods in the cluster via the name label.
+    pub fn list_pods(&self) -> Vec<Pod> {
+        let mut labels = vec![];
+        if let Some(cluster) = &self.cluster {
+            labels.push(format!(
+                "{}={}",
+                stackable_operator::labels::APP_INSTANCE_LABEL,
+                cluster.name(),
+            ));
+        }
+
+        labels.push(format!(
+            "{}={}",
+            stackable_operator::labels::APP_NAME_LABEL,
+            &self.options.cluster_type
+        ));
+
+        self.client.list_labeled::<Pod>(&labels.join(",")).items
+    }
+
+    /// Write a formatted message with cluster kind and cluster name in the beginning to the console.
+    fn log(&self, message: &str) -> String {
+        let cluster_name = if self.cluster.is_some() {
+            T::name(self.cluster.as_ref().unwrap())
+        } else {
+            "<not-found>".to_string()
+        };
+        format!("[{}/{}] {}", T::kind(&()), cluster_name, message)
+    }
+
+    /// This creates a kube client and should be executed at the start of every test.
+    pub fn new(options: TestClusterOptions, timeouts: TestClusterTimeouts) -> Self {
+        TestCluster {
+            client: TestKubeClient::new(),
+            cluster: None,
+            options,
+            timeouts,
+        }
+    }
+
+    /// A "busy" wait for all pods to be terminated and cleaned up.
+    pub fn wait_for_pods_terminated(&self) -> Result<()> {
+        let now = Instant::now();
+
+        while now.elapsed().as_secs() < self.timeouts.pods_terminated.as_secs() {
+            let pods = self.list_pods();
+
+            if pods.is_empty() {
+                return Ok(());
+            }
+
+            println!(
+                "{}",
+                self.log(&format!("Waiting for {} Pod(s) to terminate", pods.len()))
+            );
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        Err(anyhow!(self.log(&format!(
+            "Pods did not terminate within the specified timeout of {} second(s)",
+            self.timeouts.pods_terminated.as_secs()
+        ))))
     }
 
     /// Wait for the `expected_pod_count` pods to become ready or return an error if they fail to
@@ -196,7 +222,7 @@ where
         let now = Instant::now();
 
         while now.elapsed().as_secs() < self.timeouts.cluster_ready.as_secs() {
-            let created_pods = self.get_current_pods();
+            let created_pods = self.list_pods();
 
             println!(
                 "{}",
