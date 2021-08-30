@@ -8,16 +8,16 @@
 
 === Added
 * list_config_maps via label selector ({21}).
-* list_pods now has another label for cluster name ({21}).
+* list_pods `LabelSelector` now has `stackable_operator::labels::APP_INSTANCE_LABEL` for cluster name ({21}).
 
 === Changed
 * Dependency `kube` set to version `0.58` ({15}).
 * Added operator checks for pod version (label) and pod creation timestamps ({19}).
 * Improved operator logging output (messages are prefixed with [<Kind>/<Name>]) ({19}).
 * Dependency `tokio` set to version `1.10` ({21}).
-* All "get_" methods renamed to "list_" ({21}).
-* Sorted cluster methods alphabetically ({21}).
-* Renamed `pod_name_label` to `cluster_type` ({21}).
+* `BREAKING`: All "get_" methods renamed to "list_" ({21}).
+* Sorted setup.rs `TestCluster` (except `TestCluster::new()`) methods alphabetically ({21}).
+* `BREAKING`: Renamed `pod_name_label` to `cluster_type` ({21}).
 
 == 0.3.0 - 2021-07-13
 

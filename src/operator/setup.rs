@@ -33,6 +33,16 @@ impl<T> TestCluster<T>
 where
     T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize,
 {
+    /// This creates a kube client and should be executed at the start of every test.
+    pub fn new(options: TestClusterOptions, timeouts: TestClusterTimeouts) -> Self {
+        TestCluster {
+            client: TestKubeClient::new(),
+            cluster: None,
+            options,
+            timeouts,
+        }
+    }
+
     /// Applies a custom resource, stores the returned cluster object and sleeps for
     /// two seconds to give the operator time to react on the custom resource.
     /// Without the sleep it can happen that tests run without any pods being created.
@@ -138,15 +148,17 @@ where
             .items
     }
 
-    /// Returns all available nodes in the cluster. Can be used to determine the expected pods
-    /// for tests (depending on the custom resource)
+    /// List all nodes registered in the api server that have an agent running (that have a
+    /// `kubernetes.io/arch=stackable-linux` label set).
+    /// May be used to determine the expected pods for tests (depending on the custom resource).
     pub fn list_nodes(&self) -> Vec<Node> {
         self.client
             .list_labeled::<Node>("kubernetes.io/arch=stackable-linux")
             .items
     }
 
-    /// List all available pods in the cluster via the name label.
+    /// List all pods belonging to this cluster that were created in the api server
+    /// via the `APP_INSTANCE_LABEL` and `APP_NAME_LABEL` labels.
     pub fn list_pods(&self) -> Vec<Pod> {
         let mut labels = vec![];
         if let Some(cluster) = &self.cluster {
@@ -174,16 +186,6 @@ where
             "<not-found>".to_string()
         };
         format!("[{}/{}] {}", T::kind(&()), cluster_name, message)
-    }
-
-    /// This creates a kube client and should be executed at the start of every test.
-    pub fn new(options: TestClusterOptions, timeouts: TestClusterTimeouts) -> Self {
-        TestCluster {
-            client: TestKubeClient::new(),
-            cluster: None,
-            options,
-            timeouts,
-        }
     }
 
     /// A "busy" wait for all pods to be terminated and cleaned up.
