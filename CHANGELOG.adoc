@@ -5,6 +5,7 @@
 :15: https://github.com/stackabletech/integration-test-commons/pull/15[#15]
 :19: https://github.com/stackabletech/integration-test-commons/pull/19[#19]
 :21: https://github.com/stackabletech/integration-test-commons/pull/21[#21]
+:22: https://github.com/stackabletech/integration-test-commons/pull/22[#22]
 
 === Added
 * list_config_maps via label selector ({21}).
@@ -18,6 +19,10 @@
 * Added operator checks for pod version (label) and pod creation timestamps ({19}).
 * Improved operator logging output (messages are prefixed with [<Kind>/<Name>]) ({19}).
 * Sorted `TestCluster` (except `TestCluster::new()`) methods alphabetically ({21}).
+
+=== Fixed
+* `test::kube::KubeClient::get_annotation` listens not only on `Added`
+  events but also on `Modified` events ({22}).
 
 == 0.3.0 - 2021-07-13
 
