@@ -4,11 +4,20 @@
 
 :15: https://github.com/stackabletech/integration-test-commons/pull/15[#15]
 :19: https://github.com/stackabletech/integration-test-commons/pull/19[#19]
+:21: https://github.com/stackabletech/integration-test-commons/pull/21[#21]
+
+=== Added
+* list_config_maps via label selector ({21}).
+* list_pods `LabelSelector` now has `stackable_operator::labels::APP_INSTANCE_LABEL` for cluster name ({21}).
 
 === Changed
-* Dependency `kube` set to version `0.58` ({15}).
+* `BREAKING [Operator]`: All `TestCluster` "get_" methods renamed to "list_" ({21}).
+* `BREAKING [Operator]`: Renamed `pod_name_label` to `cluster_type` ({21}).
+* `kube-rs`: `0.57` → `0.58` ({15}).
+* `tokio`: `1.8` → `1.10` ({21}).
 * Added operator checks for pod version (label) and pod creation timestamps ({19}).
 * Improved operator logging output (messages are prefixed with [<Kind>/<Name>]) ({19}).
+* Sorted `TestCluster` (except `TestCluster::new()`) methods alphabetically ({21}).
 
 == 0.3.0 - 2021-07-13
 
@@ -25,9 +34,9 @@
 * Add synchronization to create the integration test repository only once per test file ({8}, {11}).
 
 === Changed
-* Dependency `k8s-openapi` set to version `0.12` ({9}).
-* Dependency `kube` set to version `0.57` ({9}).
-* Dependency `tokio` set to version `1.8` ({9}).
+* `k8s-openapi`: `0.11` → `0.12` ({9}).
+* `kube-rs`: `0.56` → `0.57` ({9}).
+* `tokio`: `1.6` → `1.8` ({9}).
 
 == 0.2.0 - 2021-06-22
 
@@ -43,7 +52,7 @@
 * Race conditions in `test::kube::KubeClient` fixed ({5}).
 
 === Changed
-* Dependency `kube` set to version `0.56` ({4}).
+* `kube-rs`: `0.52` → `0.56` ({4}).
 * `test::kube::Timeouts::verify_pod_condition` renamed to `verify_status` ({5}).
 
 
@@ -60,6 +69,6 @@
 * Doctests fixed ({2}).
 
 === Changed
-* Dependency `kube` set to version `0.52` ({2}).
+* `kube-rs`: `0.0 → `0.52` ({2}).
 * `KubeClient::find` renamed to `KubeClient::find_namespaced` ({2}).
 * `KubeClient::find_crd` generalized and renamed to `KubeClient::find` ({2}).
