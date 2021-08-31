@@ -429,7 +429,7 @@ impl KubeClient {
         }
 
         while let Some(event) = stream.try_next().await? {
-            if let WatchEvent::Added(resource) = event {
+            if let WatchEvent::Added(resource) | WatchEvent::Modified(resource) = event {
                 if let Some(value) = get_value(&resource) {
                     return Ok(value);
                 }
