@@ -1,6 +1,8 @@
 = Changelog
 
-== 0.4.0 - unreleased
+== 0.5.0 - unreleased
+
+== 0.4.0 - 2021-09-01
 
 :15: https://github.com/stackabletech/integration-test-commons/pull/15[#15]
 :19: https://github.com/stackabletech/integration-test-commons/pull/19[#19]
