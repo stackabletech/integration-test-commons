@@ -88,26 +88,25 @@ where
     /// May be used to check the for the correct version after cluster updates.
     pub fn check_pod_version(&self, version: &str) -> Result<()> {
         for pod in &self.list_pods() {
-            if let Some(pod_version) = pod
-                .metadata
-                .labels
-                .get(stackable_operator::labels::APP_VERSION_LABEL)
-            {
-                if version != pod_version {
-                    return Err(anyhow!(self.log(&format!(
+            if let Some(labels) = &pod.metadata.labels {
+                if let Some(pod_version) = labels.get(stackable_operator::labels::APP_VERSION_LABEL)
+                {
+                    if version != pod_version {
+                        return Err(anyhow!(self.log(&format!(
                         "Pod [{}] has version [{}] but should have version [{}]. This should not happen!",
                         pod.metadata.name.as_ref().unwrap(),
                         pod_version,
                         version.to_string()
                     ))));
-                }
-            } else {
-                return Err(anyhow!(
+                    }
+                } else {
+                    return Err(anyhow!(
                 "Pod [{}] has no version label [{}]. Expected version [{}]. This should not happen!",
                 pod.metadata.name.as_ref().unwrap(),
                 stackable_operator::labels::APP_VERSION_LABEL,
                 version.to_string(),
             ));
+                }
             }
         }
 

@@ -414,7 +414,10 @@ impl KubeClient {
         K: Clone + Debug + DeserializeOwned + Resource,
         <K as Resource>::DynamicType: Default,
     {
-        let get_value = |resource: &K| resource.meta().annotations.get(key).cloned();
+        let get_value = |resource: &K| match &resource.meta().annotations {
+            Some(annotations) => annotations.get(key).cloned(),
+            _ => None,
+        };
 
         let timeout_secs = self.timeouts.get_annotation.as_secs() as u32;
         let api: Api<K> = Api::namespaced(self.client.clone(), &self.namespace);
@@ -553,7 +556,7 @@ pub fn with_unique_name(yaml: &str) -> String {
 /// Returns the conditions of the given node.
 pub fn get_node_conditions(node: &Node) -> Vec<NodeCondition> {
     if let Some(status) = &node.status {
-        status.conditions.clone()
+        status.conditions.clone().unwrap_or_default()
     } else {
         vec![]
     }
@@ -562,7 +565,7 @@ pub fn get_node_conditions(node: &Node) -> Vec<NodeCondition> {
 /// Returns the conditions of the given pod.
 pub fn get_pod_conditions(pod: &Pod) -> Vec<PodCondition> {
     if let Some(status) = &pod.status {
-        status.conditions.clone()
+        status.conditions.clone().unwrap_or_default()
     } else {
         vec![]
     }
@@ -573,7 +576,7 @@ pub fn get_crd_conditions(
     crd: &CustomResourceDefinition,
 ) -> Vec<CustomResourceDefinitionCondition> {
     if let Some(status) = &crd.status {
-        status.conditions.clone()
+        status.conditions.clone().unwrap_or_default()
     } else {
         vec![]
     }
@@ -582,7 +585,7 @@ pub fn get_crd_conditions(
 /// Returns the taints of the given node.
 pub fn get_node_taints(node: &Node) -> Vec<Taint> {
     if let Some(spec) = &node.spec {
-        spec.taints.clone()
+        spec.taints.clone().unwrap_or_default()
     } else {
         vec![]
     }
@@ -592,7 +595,8 @@ pub fn get_node_taints(node: &Node) -> Vec<Taint> {
 pub fn get_allocatable_pods(node: &Node) -> u32 {
     node.status
         .as_ref()
-        .and_then(|status| status.allocatable.get("pods"))
+        .and_then(|status| status.allocatable.as_ref())
+        .and_then(|allocatable| allocatable.get("pods"))
         .and_then(|quantity| quantity.0.parse().ok())
         .unwrap_or_default()
 }
