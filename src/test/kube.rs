@@ -414,9 +414,12 @@ impl KubeClient {
         K: Clone + Debug + DeserializeOwned + Resource,
         <K as Resource>::DynamicType: Default,
     {
-        let get_value = |resource: &K| match &resource.meta().annotations {
-            Some(annotations) => annotations.get(key).cloned(),
-            _ => None,
+        let get_value = |resource: &K| {
+            resource
+                .meta()
+                .annotations
+                .as_ref()
+                .and_then(|annotations| annotations.get(key).cloned())
         };
 
         let timeout_secs = self.timeouts.get_annotation.as_secs() as u32;

@@ -99,14 +99,14 @@ where
                         version.to_string()
                     ))));
                     }
-                } else {
-                    return Err(anyhow!(
+                }
+            } else {
+                return Err(anyhow!(
                 "Pod [{}] has no version label [{}]. Expected version [{}]. This should not happen!",
                 pod.metadata.name.as_ref().unwrap(),
                 stackable_operator::labels::APP_VERSION_LABEL,
                 version.to_string(),
             ));
-                }
             }
         }
 

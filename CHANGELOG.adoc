@@ -7,7 +7,7 @@
 ### Changed
 
 - `kube-rs`: `0.58` → `0.60` ({25}).
-- `k8s-openapi` features: `v1_21` → `v1_22` ({25}).
+- `k8s-openapi`: `version: 0.12, feature: v1_21` → `version: 0.13, feature: v1_22` ({25}).
 - `operator-rs` `0.2.0` → `0.2.2` ({25}).
 
 == 0.4.0 - 2021-09-01
