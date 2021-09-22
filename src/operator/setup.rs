@@ -22,6 +22,7 @@ pub struct TestCluster<T: Clone + Debug + DeserializeOwned + Resource<DynamicTyp
 }
 
 /// Some reoccurring common test cluster options.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TestClusterOptions {
     app_name: String,
     instance_name: String,
@@ -41,12 +42,14 @@ impl TestClusterOptions {
 }
 
 /// Some reoccurring common test cluster timeouts.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TestClusterTimeouts {
     pub cluster_ready: Duration,
     pub pods_terminated: Duration,
 }
 
 /// Some reoccurring common labels.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TestClusterLabels {
     pub app: String,
     pub instance: String,
@@ -69,16 +72,16 @@ where
 {
     /// This creates a kube client and should be executed at the start of every test.
     pub fn new(
-        options: TestClusterOptions,
-        labels: TestClusterLabels,
-        timeouts: TestClusterTimeouts,
+        options: &TestClusterOptions,
+        labels: &TestClusterLabels,
+        timeouts: &TestClusterTimeouts,
     ) -> Self {
         TestCluster {
             client: TestKubeClient::new(),
             cluster: None,
-            options,
-            labels,
-            timeouts,
+            options: options.clone(),
+            labels: labels.clone(),
+            timeouts: timeouts.clone(),
         }
     }
 
@@ -113,10 +116,10 @@ where
 
             if pod_creation_timestamp < creation_timestamp {
                 return Err(anyhow!(self.log(
-                &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
-                pod.metadata.name.as_ref().unwrap(),
-                pod_creation_timestamp,
-                creation_timestamp,
+                    &format!("Pod [{}] has an older timestamp [{:?}] than the provided timestamp [{:?}]. This should not be happening!",
+                    pod.metadata.name.as_ref().unwrap(),
+                    pod_creation_timestamp,
+                    creation_timestamp,
             ))));
             }
         }
