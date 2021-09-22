@@ -11,6 +11,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+const MAX_INSTANCE_NAME_LEN: usize = 63;
+
 /// A wrapper to avoid passing in client or cluster everywhere.
 pub struct TestCluster<T: Clone + Debug + DeserializeOwned + Resource<DynamicType = ()> + Serialize>
 {
@@ -30,13 +32,20 @@ pub struct TestClusterOptions {
 
 impl TestClusterOptions {
     pub fn new(app_name: &str, instance_name: &str) -> Self {
+        let uid = Uuid::new_v4().as_fields().0.to_string();
+        // MAX_INSTANCE_NAME_LEN - uid.len() - 1 (for the "-")
+        let max_len = MAX_INSTANCE_NAME_LEN - uid.len() - 1;
+        // Append a part of UUID to the cluster name. The full cluster name may not exceed 63
+        // characters. So we cut the instance_name if it is bigger than max_len.
+        let adapted_name = if instance_name.len() > max_len {
+            &instance_name[0..max_len - 1]
+        } else {
+            instance_name
+        };
+
         TestClusterOptions {
             app_name: app_name.to_string(),
-            /// Append UUID to the cluster name. The full UUID is too long when combined in the pod
-            /// names (63 characters). So we just use a slice here to avoid conflicts with the names.
-            instance_name: format!("{}-{}", instance_name, Uuid::new_v4().as_fields().0).as_str()
-                [0..62]
-                .to_string(),
+            instance_name: format!("{}-{}", adapted_name, uid),
         }
     }
 }
