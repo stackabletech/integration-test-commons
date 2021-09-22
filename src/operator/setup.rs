@@ -91,7 +91,8 @@ where
             if let Some(pod_version) = pod
                 .metadata
                 .labels
-                .get(stackable_operator::labels::APP_VERSION_LABEL)
+                .as_ref()
+                .and_then(|labels| labels.get(stackable_operator::labels::APP_VERSION_LABEL))
             {
                 if version != pod_version {
                     return Err(anyhow!(self.log(&format!(
@@ -103,11 +104,11 @@ where
                 }
             } else {
                 return Err(anyhow!(
-                "Pod [{}] has no version label [{}]. Expected version [{}]. This should not happen!",
-                pod.metadata.name.as_ref().unwrap(),
-                stackable_operator::labels::APP_VERSION_LABEL,
-                version.to_string(),
-            ));
+                    "Pod [{}] has no version label [{}]. Expected version [{}]. This should not happen!",
+                    pod.metadata.name.as_ref().unwrap(),
+                    stackable_operator::labels::APP_VERSION_LABEL,
+                    version.to_string(),
+                ));
             }
         }
 
