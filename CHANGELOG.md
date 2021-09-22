@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2021-09-22
+
+
 ### Added
 - Generic method `list` for resources like pods or configmaps ([#27]).
 - `TestClusterLabels` struct for app, instance and version labels ([#27]).
