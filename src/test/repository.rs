@@ -18,7 +18,7 @@ const REPO_SPEC: &str = "
     spec:
         repo_type: StackableRepo
         properties:
-            url: https://raw.githubusercontent.com/stackabletech/integration-test-repo/main/
+            url: https://cdn.jsdelivr.net/gh/stackabletech/integration-test-repo@main/
 ";
 
 /// Specification of a Stackable repository

@@ -2,8 +2,14 @@
 
 ## [Unreleased]
 
-## [0.5.0] - 2021-09-22
+### Changed
+- The CDN jsdelivr.net is used instead of githubusercontent.com for the Stackable repository because
+  it serves the content with the content type "application/gzip" which is expected by the Stackable
+  Agent ([#32]).
 
+[#32]: https://github.com/stackabletech/integration-test-commons/pull/32
+
+## [0.5.0] - 2021-09-22
 
 ### Added
 - Generic method `list` for resources like pods or configmaps ([#27]).
@@ -11,7 +17,6 @@
 - `instance_name` to `TestClusterOptions` and implemented `new()` where a UUID is automatically appended to the `instance_name` ([#27]).
 
 ### Changed
-
 - `kube-rs`: `0.58` → `0.60` ({25}).
 - `k8s-openapi`: `version: 0.12, feature: v1_21` → `version: 0.13, feature: v1_22` ([#25]).
 - `operator-rs` labels are replaced through the `TestClusterLabels` ([#27]).
@@ -23,7 +28,7 @@
 [#25]: https://github.com/stackabletech/integration-test-commons/pull/25
 [#27]: https://github.com/stackabletech/integration-test-commons/pull/27
 
-## 0.4.0 - 2021-09-01
+## [0.4.0] - 2021-09-01
 
 ### Added
 * list_config_maps via label selector ([#21]).
@@ -47,7 +52,7 @@
 [#21]: https://github.com/stackabletech/integration-test-commons/pull/21
 [#22]: https://github.com/stackabletech/integration-test-commons/pull/22
 
-## 0.3.0 - 2021-07-13
+## [0.3.0] - 2021-07-13
 
 ### Removed
 * Kubernetes version feature removed from the k8s-openapi dependency. It
@@ -66,7 +71,7 @@
 [#10]: https://github.com/stackabletech/integration-test-commons/pull/10
 [#11]: https://github.com/stackabletech/integration-test-commons/pull/11
 
-## 0.2.0 - 2021-06-22
+## [0.2.0] - 2021-06-22
 
 ### Added
 * TestCluster merged from spark-operator-integration-tests and zookeeper-operator-integration-tests ([#4]).
@@ -84,7 +89,7 @@
 [#5]: https://github.com/stackabletech/integration-test-commons/pull/5
 
 
-## 0.1.0 - 2021-06-10
+## [0.1.0] - 2021-06-10
 
 ### Added
 * Module `test` copied and merged from agent-integration-tests, spark-operator-integration-tests, and zookeeper-operator-integration-tests ([#2]).
@@ -100,4 +105,3 @@
 * `KubeClient::find_crd` generalized and renamed to `KubeClient::find` ([#2]).
 
 [#2]: https://github.com/stackabletech/integration-test-commons/pull/2
-
