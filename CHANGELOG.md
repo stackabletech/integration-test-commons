@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.6.0] - 2021-10-19
 
 ### Changed
 - The CDN jsdelivr.net is used instead of githubusercontent.com for the Stackable repository because
